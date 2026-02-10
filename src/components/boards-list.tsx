@@ -7,6 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
+import { deleteBoard } from '@/app/actions/board-actions';
+
+
+
 
 type Board = {
   id: string;
@@ -17,6 +33,47 @@ type Board = {
 interface BoardsListProps {
   initialBoards: Board[];
   userId: string;
+}
+
+interface DeleteButtonProps {
+  boardId: string;
+  userId: string;
+}
+
+function DeleteButton({ userId, boardId }: DeleteButtonProps) {
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await deleteBoard(boardId);
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['boards', userId] });
+      const previous = queryClient.getQueryData<Board[]>(['boards', userId]);
+      queryClient.setQueryData(['boards', userId], (old: Board[] = []) =>
+        old.filter(b => b.id !== boardId)
+      );
+      return { previous };
+    },
+    onError: (err, _, context) => {
+      queryClient.setQueryData(['boards', userId], context?.previous);
+      toast.error('Erreur lors de la suppression');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['boards', userId] });
+      toast.success('Board supprimé');
+    },
+  });
+
+  return (
+    <AlertDialogAction
+      onClick={() => deleteMutation.mutate()}
+      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      disabled={deleteMutation.isPending}
+    >
+      {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+    </AlertDialogAction>
+  );
 }
 
 export function BoardsList({ initialBoards, userId }: BoardsListProps) {
@@ -107,14 +164,37 @@ export function BoardsList({ initialBoards, userId }: BoardsListProps) {
           {boards?.map((board) => (
             <Card
               key={board.id}
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group relative"
             >
               <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
                 {board.title}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-4">
                 Créé le {new Date(board.created_at).toLocaleDateString('fr-FR')}
               </p>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer ce board ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Toutes les listes et tâches associées seront perdues.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <DeleteButton userId={userId} boardId={board.id} />
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </Card>
           ))}
         </div>
