@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { deleteBoard } from '@/app/actions/board-actions';
+import Link from 'next/link';
 
 
 
@@ -162,40 +163,46 @@ export function BoardsList({ initialBoards, userId }: BoardsListProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {boards?.map((board) => (
-            <Card
-              key={board.id}
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group relative"
-            >
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-                {board.title}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Créé le {new Date(board.created_at).toLocaleDateString('fr-FR')}
-              </p>
+            <div className="relative group rounded-lg overflow-hidden">
+              <Link
+                href={`/board/${board.id}`}
+                className="block h-full"
+                aria-label={`Ouvrir le board ${board.title}`}
+              >
+                <Card className="p-6 hover:shadow-lg transition-all h-full">
+                  <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
+                    {board.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Créé le {new Date(board.created_at).toLocaleDateString('fr-FR')}
+                  </p>
+                </Card>
+              </Link>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </AlertDialogTrigger>
+
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Supprimer ce board ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Cette action est irréversible. Toutes les listes et tâches associées seront perdues.
+                      Cette action est irréversible...
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <DeleteButton userId={userId} boardId={board.id} />
+                    <DeleteButton boardId={board.id} userId={userId} />
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </Card>
+            </div>
           ))}
         </div>
       )}
